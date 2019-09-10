@@ -1,8 +1,15 @@
-from worket.config.db import db_session
-from worket.config.logging import log
+from .models import Company
 
 
-def list_all():
-    """lists all companies"""
-    log.msg('companies/repositories/list_all')
-    db_session.list_all()
+class CompanyRepository(object):
+    def __init__(self, db_session):
+        self.db_session = db_session
+
+    def list_all(self):
+        """lists all companies"""
+        return self.db_session.query(Company).all()
+
+    def save(self, company):
+        """saves a new company"""
+        self.db_session.add(company)
+        self.db_session.commit()
