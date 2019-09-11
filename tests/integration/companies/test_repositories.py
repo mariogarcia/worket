@@ -8,26 +8,32 @@ from tests.util.alembic import run_migrations
 
 
 @pytest.fixture()
-def postgres_container():
-    """
-    Returns a new PortablePostgresContainer instance
-    """
-    return create_postgres_container(
-        "worklet",
-        "postgres",
-        "postgres",
-        "5432"
+def db_session():
+    """Returns a new PortablePostgresContainer instance"""
+    postgres = create_postgres_container(
+        db_name="worklet",
+        db_username="postgres",
+        db_password="postgres",
+        db_port="5432"
     )
+    postgres.start()
+    db_uri = postgres.get_connection_url()
+    db_session = create_db_session(db_uri)
+    run_migrations(db_uri)
+    yield db_session
+    postgres.stop()
 
 
-def test_list_all_companies(postgres_container):
-    with postgres_container as postgres:
-        db_uri = postgres.get_connection_url()
-        db_session = create_db_session(db_uri)
-        repository = CompanyRepository(db_session)
+def test_list_none_companies(db_session):
+    repository = CompanyRepository(db_session)
+    result = repository.list_all()
 
-        run_migrations(db_uri)
-        repository.save(Company(id=generate_id(), name="Pepsi"))
-        result = repository.list_all()
+    assert len(result) == 0
 
-        assert len(result) == 1
+
+def test_list_all_companies(db_session):
+    repository = CompanyRepository(db_session)
+    repository.save(Company(id=generate_id(), name="Pepsi"))
+    result = repository.list_all()
+
+    assert len(result) == 1
